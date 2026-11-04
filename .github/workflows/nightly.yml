@@ -81,9 +81,13 @@ jobs:
         run: |
           (cd jars && sha256sum *.jar > SHA256SUMS)
           gh release delete nightly --cleanup-tag --yes || true
-          gh release create nightly jars/* --prerelease --latest=false \
+          # Uploading separately with --clobber survives gh retrying an upload
+          # that had in fact succeeded; the release is published once complete.
+          gh release create nightly --draft --prerelease --latest=false \
             --target "$GITHUB_SHA" \
             --title "Nightly $VERSION" \
             --notes "Automated build of main against airspyone_host ${REF}. Not for production use.
 
           Built from ${GITHUB_SHA} and airspyone_host ${UPSTREAM}"
+          gh release upload nightly jars/* --clobber
+          gh release edit nightly --draft=false --prerelease --latest=false

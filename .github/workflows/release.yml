@@ -47,6 +47,10 @@ jobs:
           name: jars
           path: jars
 
+      # Publishing is split into steps that can all be repeated, so a failed
+      # upload or a re-run finishes the draft left behind rather than failing on
+      # it: gh retries uploads, and a retry of an upload that had in fact
+      # succeeded fails with "ReleaseAsset.name already exists" unless clobbering.
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -59,10 +63,19 @@ jobs:
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then
             prerelease=(--prerelease)
           fi
-          gh release create "$GITHUB_REF_NAME" jars/* "${prerelease[@]}" \
-            --verify-tag --generate-notes --title "jAirspy ${GITHUB_REF_NAME#v}" \
-            --notes "Native library versions:
+          if gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null | grep -qx false; then
+            echo "::error::Release $GITHUB_REF_NAME is already published"
+            exit 1
+          elif gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Reusing the draft release $GITHUB_REF_NAME"
+          else
+            gh release create "$GITHUB_REF_NAME" --draft "${prerelease[@]}" \
+              --verify-tag --generate-notes --title "jAirspy ${GITHUB_REF_NAME#v}" \
+              --notes "Native library versions:
 
           \`\`\`
           $info
           \`\`\`"
+          fi
+          gh release upload "$GITHUB_REF_NAME" jars/* --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false
