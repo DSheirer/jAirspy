@@ -60,12 +60,22 @@ $Context = 'pthreads4w\context.h'
 Write-Host "=== libairspy $Ref ==="
 # Fetching by ref works for a commit as well as a branch or tag.
 git init --quiet airspy
+# Keep upstream's LF line endings, which the patches below expect, whatever
+# core.autocrlf the machine has.
+git -C airspy config core.autocrlf false
 git -C airspy fetch --quiet --depth 1 $Versions.AIRSPY_REPOSITORY $Ref
 git -C airspy checkout --quiet FETCH_HEAD
 $Commit = (git -C airspy rev-parse HEAD).Trim()
 $HeaderVersion = (Select-String -Path 'airspy\libairspy\src\airspy.h' -Pattern '^#define AIRSPY_VERSION "(.*)"').Matches[0].Groups[1].Value
 if ($Ref -eq $Versions.AIRSPY_REF -and $HeaderVersion -ne $Versions.AIRSPY_VERSION) {
     throw "airspy.h at $Ref is version $HeaderVersion, but AIRSPY_VERSION is $($Versions.AIRSPY_VERSION)"
+}
+# Fixes to upstream that it has not adopted yet; see native\patches\README.md.
+$Patches = @()
+foreach ($Patch in Get-ChildItem "$Root\native\patches\*.patch" | Sort-Object Name) {
+    Write-Host "Applying $($Patch.Name)"
+    git -C airspy apply $Patch.FullName
+    $Patches += $Patch.Name
 }
 
 cmake -S "$Root\native\windows" -B build -A $Arch `
@@ -89,6 +99,7 @@ Copy-Item 'pthreads4w\LICENSE' "$Licenses\pthreads4w-LICENSE"
     "airspy.ref=$Ref",
     "airspy.commit=$Commit",
     "airspy.version=$HeaderVersion",
+    "airspy.patches=$($Patches -join ' ')",
     "libusb.version=$LibusbVersion",
     "pthreads4w.commit=$PthreadsCommit"
 ) | Set-Content -Encoding ascii "$Out\build-info.properties"

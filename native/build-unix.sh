@@ -67,6 +67,13 @@ if [ "$REF" = "$AIRSPY_REF" ] && [ "$HEADER_VERSION" != "$AIRSPY_VERSION" ]; the
     echo "airspy.h at $REF is version $HEADER_VERSION, but AIRSPY_VERSION is $AIRSPY_VERSION" >&2
     exit 1
 fi
+# Fixes to upstream that it has not adopted yet; see native/patches/README.md.
+PATCHES=""
+for patch in "$ROOT"/native/patches/*.patch; do
+    echo "Applying $(basename "$patch")"
+    git -C airspy apply "$patch"
+    PATCHES="$PATCHES $(basename "$patch")"
+done
 
 # Only the library is built, not airspy-tools. CMAKE_POLICY_VERSION_MINIMUM
 # lets CMake 4 configure older upstream versions that declare
@@ -129,6 +136,7 @@ cat > "$OUT/build-info.properties" <<INFO
 airspy.ref=$REF
 airspy.commit=$UPSTREAM_COMMIT
 airspy.version=$HEADER_VERSION
+airspy.patches=${PATCHES# }
 libusb.version=$LIBUSB_VERSION
 INFO
 ls -l "$OUT"

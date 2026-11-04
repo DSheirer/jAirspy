@@ -12,6 +12,10 @@ Licensed under the BSD-3-Clause license, with the I/Q conversion code under the
 MIT license. See `META-INF/licenses/libairspy-LICENSE.md`. jAirspy is an
 independent project and is not endorsed by Airspy or its contributors.
 
+The bundled libairspy is modified by the patches in `native/patches/` of this
+repository; each jar records them in
+`jairspy/native/<platform>/build-info.properties`.
+
 ## libusb
 
 Source: <https://github.com/libusb/libusb>
