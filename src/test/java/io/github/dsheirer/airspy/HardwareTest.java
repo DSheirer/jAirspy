@@ -16,10 +16,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-/** Receive-only tests against a real device. Enable with {@code -PhardwareTest=true}. */
+/**
+ * Receive-only tests against a real device. Enable with {@code -PhardwareTest=true}.
+ *
+ * <p>Each test runs on its own thread with a time limit, so a native call that
+ * never returns fails the test instead of stopping the run.
+ */
 @EnabledIfSystemProperty(named = "airspy.hardware.test", matches = "true")
+@Timeout(value = 60, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
 class HardwareTest {
     private static final long FREQUENCY = 100_000_000L;
 

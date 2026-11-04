@@ -1,3 +1,5 @@
+import java.time.Duration
+
 plugins {
     `java-library`
 }
@@ -98,6 +100,9 @@ tasks.test {
     useJUnitPlatform()
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     systemProperty("airspy.hardware.test", providers.gradleProperty("hardwareTest").getOrElse("false"))
+    // A native call that never returns would otherwise keep the test worker,
+    // and with it the USB device, busy until it is killed by hand.
+    timeout = Duration.ofMinutes(10)
     testLogging {
         events("passed", "skipped", "failed")
         showStandardStreams = true
