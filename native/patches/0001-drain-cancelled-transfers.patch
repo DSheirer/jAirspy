@@ -1,0 +1,32 @@
+diff --git a/libairspy/src/airspy.c b/libairspy/src/airspy.c
+index a2caf38..5ed67e7 100644
+--- a/libairspy/src/airspy.c
++++ b/libairspy/src/airspy.c
+@@ -519,7 +519,9 @@ static void* transfer_threadproc(void* arg)
+ 
+ static int kill_io_threads(airspy_device_t* device)
+ {
+-	struct timeval timeout = { 0, 0 };
++	/* jAirspy: wait up to 50 ms per pass for cancelled transfers to complete. */
++	struct timeval timeout = { 0, 50000 };
++	int i;
+ 
+ 	if (device->stop_requested)
+ 	{
+@@ -540,7 +542,15 @@ static int kill_io_threads(airspy_device_t* device)
+ 		    device->consumer_thread_running = false;
+ 		}
+ 
+-		libusb_handle_events_timeout_completed(device->usb_context, &timeout, NULL);
++		/* jAirspy: cancel_transfers() only requests cancellation. Drain the
++		 * events so that the cancelled transfers complete, as hydrasdr-host
++		 * does: otherwise free_transfers() and libusb_close() in airspy_close()
++		 * free transfers that libusb still has in flight, which crashes in
++		 * libusb_close() on Windows. */
++		for (i = 0; i < 2; i++)
++		{
++			libusb_handle_events_timeout_completed(device->usb_context, &timeout, NULL);
++		}
+ 	}
+ 
+ 	return AIRSPY_SUCCESS;
