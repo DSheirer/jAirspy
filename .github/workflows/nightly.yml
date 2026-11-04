@@ -1,0 +1,89 @@
+# Publishes the rolling "nightly" pre-release from main, built against the
+# upstream airspyone_host branch named by AIRSPY_NIGHTLY_REF in
+# native/versions.env. Runs when a pull request is merged, and on a daily
+# schedule to pick up upstream changes; the schedule skips when nothing changed.
+name: Nightly
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      version: ${{ steps.decide.outputs.version }}
+      upstream: ${{ steps.decide.outputs.upstream }}
+      ref: ${{ steps.decide.outputs.ref }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source native/versions.env
+          upstream="$(git ls-remote "$AIRSPY_REPOSITORY" "refs/heads/$AIRSPY_NIGHTLY_REF" | cut -f1)"
+          if [ -z "$upstream" ]; then
+            echo "::error::Upstream branch $AIRSPY_NIGHTLY_REF not found"
+            exit 1
+          fi
+          marker="Built from ${GITHUB_SHA} and airspyone_host ${upstream}"
+          build=true
+          if [ "$GITHUB_EVENT_NAME" = schedule ] &&
+             gh release view nightly --json body --jq .body 2>/dev/null | grep -qF "$marker"; then
+            build=false
+          fi
+          {
+            echo "build=$build"
+            echo "upstream=$upstream"
+            echo "ref=$AIRSPY_NIGHTLY_REF"
+            echo "version=${AIRSPY_REF#v}-nightly.$(date -u +%Y%m%d).${GITHUB_SHA::7}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.build == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      airspy_ref: ${{ needs.prepare.outputs.ref }}
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: jars
+          path: jars
+
+      - name: Replace the nightly release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          UPSTREAM: ${{ needs.prepare.outputs.upstream }}
+          REF: ${{ needs.prepare.outputs.ref }}
+        run: |
+          (cd jars && sha256sum *.jar > SHA256SUMS)
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly jars/* --prerelease --latest=false \
+            --target "$GITHUB_SHA" \
+            --title "Nightly $VERSION" \
+            --notes "Automated build of main against airspyone_host ${REF}. Not for production use.
+
+          Built from ${GITHUB_SHA} and airspyone_host ${UPSTREAM}"
