@@ -5,8 +5,8 @@ plugins {
 // The version follows the upstream release pinned in native/versions.env.
 // Workflows pass -Pversion for tagged, nightly and pull request builds.
 val pinnedVersion = file("native/versions.env").readLines()
-    .first { it.startsWith("AIRSPY_REF=") }
-    .substringAfter("=").removePrefix("v")
+    .first { it.startsWith("AIRSPY_VERSION=") }
+    .substringAfter("=")
 version = providers.gradleProperty("version").getOrElse(pinnedVersion)
 
 repositories {

@@ -20,9 +20,8 @@ import java.lang.invoke.MethodHandle;
  * <p>The deprecated {@code airspy_init} and {@code airspy_exit} are
  * intentionally absent, as are {@code airspy_config_read} and
  * {@code airspy_config_write}, which the header declares but the library does
- * not implement. Handles created with {@link #optional} are null when the
- * loaded library predates the function. {@code native/check-bindings.sh}
- * compares this list against {@code airspy.h} and the built library.
+ * not implement. {@code native/check-bindings.sh} compares this list against
+ * {@code airspy.h} and the built library.
  */
 public final class Native {
     private static final Linker LINKER = Linker.nativeLinker();
@@ -32,8 +31,7 @@ public final class Native {
     public static final MethodHandle LIST_DEVICES = call("airspy_list_devices", ADDRESS, JAVA_INT);
     public static final MethodHandle OPEN = call("airspy_open", ADDRESS);
     public static final MethodHandle OPEN_SN = call("airspy_open_sn", ADDRESS, JAVA_LONG);
-    /** Added after libairspy 1.0.10; null with older libraries. */
-    public static final MethodHandle OPEN_FD = optional("airspy_open_fd", ADDRESS, JAVA_INT);
+    public static final MethodHandle OPEN_FD = call("airspy_open_fd", ADDRESS, JAVA_INT);
     public static final MethodHandle CLOSE = call("airspy_close", ADDRESS);
     public static final MethodHandle ERROR_NAME = LINKER.downcallHandle(symbol("airspy_error_name"),
         FunctionDescriptor.of(ADDRESS, JAVA_INT));
@@ -96,12 +94,6 @@ public final class Native {
 
     private static MethodHandle call(String name, MemoryLayout... arguments) {
         return LINKER.downcallHandle(symbol(name), FunctionDescriptor.of(JAVA_INT, arguments));
-    }
-
-    private static MethodHandle optional(String name, MemoryLayout... arguments) {
-        return LOOKUP.find(name)
-            .map(address -> LINKER.downcallHandle(address, FunctionDescriptor.of(JAVA_INT, arguments)))
-            .orElse(null);
     }
 
     private static MethodHandle voidCall(String name, MemoryLayout... arguments) {

@@ -1,6 +1,6 @@
 # Publishes a release when a version tag is pushed, built from the upstream
-# version pinned in native/versions.env. The tag has to match that pin: v1.0.10,
-# v1.0.10.1 for a Java-only fix, or v1.0.10-rc1 for a pre-release.
+# version pinned in native/versions.env. The tag has to match AIRSPY_VERSION
+# there: v1.0.12, v1.0.12.1 for a Java-only fix, or v1.0.12-rc1 for a pre-release.
 name: Release
 
 on:
@@ -22,9 +22,9 @@ jobs:
         run: |
           source native/versions.env
           case "$GITHUB_REF_NAME" in
-            "$AIRSPY_REF" | "$AIRSPY_REF".[0-9]* | "$AIRSPY_REF"-*) ;;
+            "v$AIRSPY_VERSION" | "v$AIRSPY_VERSION".[0-9]* | "v$AIRSPY_VERSION"-*) ;;
             *)
-              echo "::error::Tag $GITHUB_REF_NAME does not match pinned upstream $AIRSPY_REF"
+              echo "::error::Tag $GITHUB_REF_NAME does not match pinned upstream version v$AIRSPY_VERSION"
               exit 1
               ;;
           esac

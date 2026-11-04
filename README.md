@@ -102,9 +102,12 @@ Pass an upstream git ref to build something other than the pin, such as
 
 ## Releases
 
-jAirspy versions follow upstream: jAirspy 1.0.10 wraps libairspy 1.0.10. The
-upstream version is pinned in [`native/versions.env`](native/versions.env), which
-is the only place the version is set.
+jAirspy versions follow upstream: jAirspy 1.0.12 wraps libairspy 1.0.12. The
+upstream source and version are pinned in
+[`native/versions.env`](native/versions.env), which is the only place they are
+set. Upstream has not tagged 1.0.12, so `AIRSPY_REF` pins a commit on `master`
+and `AIRSPY_VERSION` gives its version; the build fails if that does not match
+the version in the pinned `airspy.h`.
 
 | Trigger | What happens |
 |---------|--------------|
@@ -113,15 +116,15 @@ is the only place the version is set.
 | Daily schedule | The same, if this project or upstream has changed |
 | Tag `vX.Y.Z` | Publishes a release built from the pinned upstream version |
 
-To release, tag the pinned version: `git tag v1.0.10 && git push origin v1.0.10`.
-The workflow rejects a tag that does not match the pin. For a Java-only fix on
-the same upstream version add a fourth number, such as `v1.0.10.1`; for a
-pre-release add a suffix, such as `v1.0.10-rc1`.
+To release, tag the pinned version: `git tag v1.0.12 && git push origin v1.0.12`.
+The workflow rejects a tag that does not match `AIRSPY_VERSION`. For a Java-only
+fix on the same upstream version add a fourth number, such as `v1.0.12.1`; for a
+pre-release add a suffix, such as `v1.0.12-rc1`.
 
-To adopt a new upstream release, change `AIRSPY_REF` in `native/versions.env`,
-which also moves the jAirspy version. If upstream added functions, the build
-lists them; add them to `Native.java`. A function that only newer libraries
-have can be bound with `optional(...)`, as `airspy_open_fd` is.
+To adopt a new upstream version, change `AIRSPY_REF` (a commit or tag) and
+`AIRSPY_VERSION` in `native/versions.env`; the latter also moves the jAirspy
+version. If upstream added functions, the build lists them; add them to
+`Native.java`.
 
 ## License
 

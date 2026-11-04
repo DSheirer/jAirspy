@@ -57,11 +57,20 @@ fi
 unset CFLAGS LDFLAGS
 
 echo "=== libairspy $REF ==="
-git clone --quiet --depth 1 --branch "$REF" "$AIRSPY_REPOSITORY" airspy
+# Fetching by ref works for a commit as well as a branch or tag.
+git init --quiet airspy
+git -C airspy fetch --quiet --depth 1 "$AIRSPY_REPOSITORY" "$REF"
+git -C airspy checkout --quiet FETCH_HEAD
 UPSTREAM_COMMIT="$(git -C airspy rev-parse HEAD)"
+HEADER_VERSION="$(sed -nE 's/^#define AIRSPY_VERSION "(.*)"/\1/p' airspy/libairspy/src/airspy.h)"
+if [ "$REF" = "$AIRSPY_REF" ] && [ "$HEADER_VERSION" != "$AIRSPY_VERSION" ]; then
+    echo "airspy.h at $REF is version $HEADER_VERSION, but AIRSPY_VERSION is $AIRSPY_VERSION" >&2
+    exit 1
+fi
 
 # Only the library is built, not airspy-tools. CMAKE_POLICY_VERSION_MINIMUM
-# lets CMake 4 configure releases that still declare cmake_minimum_required(2.8).
+# lets CMake 4 configure older upstream versions that declare
+# cmake_minimum_required(2.8); newer ones ignore it.
 CMAKE_ARGS=(
     -S airspy/libairspy -B build-airspy
     -DCMAKE_BUILD_TYPE=Release
@@ -119,6 +128,7 @@ cp "libusb-$LIBUSB_VERSION/COPYING" "$ROOT/dist/native/licenses/libusb-COPYING"
 cat > "$OUT/build-info.properties" <<INFO
 airspy.ref=$REF
 airspy.commit=$UPSTREAM_COMMIT
+airspy.version=$HEADER_VERSION
 libusb.version=$LIBUSB_VERSION
 INFO
 ls -l "$OUT"

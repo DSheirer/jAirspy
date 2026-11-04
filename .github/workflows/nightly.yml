@@ -49,7 +49,7 @@ jobs:
             echo "build=$build"
             echo "upstream=$upstream"
             echo "ref=$AIRSPY_NIGHTLY_REF"
-            echo "version=${AIRSPY_REF#v}-nightly.$(date -u +%Y%m%d).${GITHUB_SHA::7}"
+            echo "version=${AIRSPY_VERSION}-nightly.$(date -u +%Y%m%d).${GITHUB_SHA::7}"
           } >> "$GITHUB_OUTPUT"
 
   build:

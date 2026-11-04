@@ -7,8 +7,7 @@
 # Functions marked "/* name() deprecated */" in the header need no binding.
 # Given the built library, header functions it does not export (upstream
 # declares airspy_config_read and airspy_config_write without implementing
-# them) need no binding either. Bindings declared with optional(...) in
-# Native.java may be missing from older headers.
+# them) need no binding either.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -39,10 +38,9 @@ else
 fi
 
 grep -oE '"airspy_[a-z0-9_]+"' "$BINDINGS" | tr -d '"' | sort -u > "$WORK/bindings"
-grep -oE 'optional\("airspy_[a-z0-9_]+"' "$BINDINGS" | sed -E 's/.*"(.*)"/\1/' | sort -u > "$WORK/optional"
 
 MISSING="$(comm -23 "$WORK/header" "$WORK/bindings")"
-STALE="$(comm -13 "$WORK/header" "$WORK/bindings" | comm -23 - "$WORK/optional")"
+STALE="$(comm -13 "$WORK/header" "$WORK/bindings")"
 if [ -n "$MISSING" ] || [ -n "$STALE" ]; then
     [ -z "$MISSING" ] || printf 'Functions in airspy.h without a binding:\n%s\n' "$MISSING" >&2
     [ -z "$STALE" ] || printf 'Bindings not in airspy.h:\n%s\n' "$STALE" >&2

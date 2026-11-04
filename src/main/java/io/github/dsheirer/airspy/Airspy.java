@@ -75,20 +75,9 @@ public final class Airspy {
     /**
      * Opens a device from a USB file descriptor, as on Android. The descriptor
      * must stay open until the device is closed.
-     *
-     * @throws UnsupportedOperationException if the loaded libairspy predates
-     *     {@code airspy_open_fd}; see {@link #supportsFileDescriptors()}
      */
     public static AirspyDevice openFileDescriptor(int fd) throws AirspyException {
-        if (!supportsFileDescriptors()) {
-            throw new UnsupportedOperationException("libairspy " + libraryVersion() + " has no airspy_open_fd");
-        }
         return open("airspy_open_fd", Native.OPEN_FD, fd);
-    }
-
-    /** Returns true if the loaded libairspy can open a device from a file descriptor. */
-    public static boolean supportsFileDescriptors() {
-        return Native.OPEN_FD != null;
     }
 
     /** Returns the name of a board id from {@link AirspyDevice#boardId()}. */

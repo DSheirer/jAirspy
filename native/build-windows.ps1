@@ -58,8 +58,15 @@ $Context = 'pthreads4w\context.h'
     Set-Content -NoNewline -Encoding ascii $Context
 
 Write-Host "=== libairspy $Ref ==="
-git clone --quiet --depth 1 --branch $Ref $Versions.AIRSPY_REPOSITORY airspy
+# Fetching by ref works for a commit as well as a branch or tag.
+git init --quiet airspy
+git -C airspy fetch --quiet --depth 1 $Versions.AIRSPY_REPOSITORY $Ref
+git -C airspy checkout --quiet FETCH_HEAD
 $Commit = (git -C airspy rev-parse HEAD).Trim()
+$HeaderVersion = (Select-String -Path 'airspy\libairspy\src\airspy.h' -Pattern '^#define AIRSPY_VERSION "(.*)"').Matches[0].Groups[1].Value
+if ($Ref -eq $Versions.AIRSPY_REF -and $HeaderVersion -ne $Versions.AIRSPY_VERSION) {
+    throw "airspy.h at $Ref is version $HeaderVersion, but AIRSPY_VERSION is $($Versions.AIRSPY_VERSION)"
+}
 
 cmake -S "$Root\native\windows" -B build -A $Arch `
     '-DCMAKE_POLICY_VERSION_MINIMUM=3.5' `
@@ -81,6 +88,7 @@ Copy-Item 'pthreads4w\LICENSE' "$Licenses\pthreads4w-LICENSE"
 @(
     "airspy.ref=$Ref",
     "airspy.commit=$Commit",
+    "airspy.version=$HeaderVersion",
     "libusb.version=$LibusbVersion",
     "pthreads4w.commit=$PthreadsCommit"
 ) | Set-Content -Encoding ascii "$Out\build-info.properties"

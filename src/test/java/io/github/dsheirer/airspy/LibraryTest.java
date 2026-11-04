@@ -27,11 +27,7 @@ class LibraryTest {
     void loadsLibraryAndResolvesEveryFunction() {
         LibraryVersion version = Airspy.libraryVersion();
         assertTrue(version.major() >= 1, version.toString());
-        assertNotNull(Native.BOARD_PARTID_SERIALNO_READ);
-        // airspy_open_fd arrived after 1.0.10; later libraries must have it.
-        if (version.minor() > 0 || version.revision() > 10) {
-            assertTrue(Airspy.supportsFileDescriptors());
-        }
+        assertNotNull(Native.OPEN_FD);
     }
 
     @Test

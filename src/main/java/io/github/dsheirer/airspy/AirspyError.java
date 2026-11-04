@@ -6,7 +6,6 @@ public enum AirspyError {
     NOT_FOUND(-5),
     BUSY(-6),
     NO_MEM(-11),
-    /** Returned only by libairspy versions after 1.0.10. */
     UNSUPPORTED(-12),
     LIBUSB(-1000),
     THREAD(-1001),
