@@ -4,9 +4,9 @@
 #
 # Usage: native/build-unix.sh [airspy-git-ref]
 #
-# libusb stays a separate shared library because it is LGPL-2.1: keeping it out
-# of libairspy lets users replace it. It is built without udev so the Linux
-# binaries do not need libudev at runtime.
+# libusb is built only to link against: at runtime libairspy uses the libusb
+# that jlibusb supplies, loaded from the same directory, so the jar does not
+# contain libusb. It is built without udev, as jlibusb's is.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -99,22 +99,20 @@ cmake --build build-airspy --parallel "$JOBS" --target airspy >/dev/null
 
 echo "=== packaging $PLATFORM ==="
 if [ "$OS" = linux ]; then
-    cp -L "$USB_PREFIX/lib/libusb-1.0.so.0" "$OUT/libusb-1.0.so.0"
     cp -L build-airspy/src/libairspy.so "$OUT/libairspy.so"
     chmod 755 "$OUT"/*
     # Only glibc and libusb may remain as dependencies.
     readelf -d "$OUT/libairspy.so" | grep -E 'NEEDED|RUNPATH|RPATH'
 else
-    cp -L "$USB_PREFIX/lib/libusb-1.0.0.dylib" "$OUT/libusb-1.0.0.dylib"
     cp -L build-airspy/src/libairspy.dylib "$OUT/libairspy.dylib"
     chmod 755 "$OUT"/*
-    # Point libairspy at the bundled libusb, not the absolute build path, and
-    # re-sign because install_name_tool invalidates the ad-hoc signatures.
+    # Point libairspy at jlibusb's libusb, which is extracted next to it, not
+    # the absolute build path, and re-sign because install_name_tool
+    # invalidates the ad-hoc signature.
     LINKED_USB="$(otool -L "$OUT/libairspy.dylib" | awk '/libusb-1\.0/ {print $1; exit}')"
-    install_name_tool -id @rpath/libusb-1.0.0.dylib "$OUT/libusb-1.0.0.dylib"
     install_name_tool -id @rpath/libairspy.dylib "$OUT/libairspy.dylib"
     install_name_tool -change "$LINKED_USB" @loader_path/libusb-1.0.0.dylib "$OUT/libairspy.dylib"
-    codesign -f -s - "$OUT"/*.dylib
+    codesign -f -s - "$OUT/libairspy.dylib"
     otool -L "$OUT/libairspy.dylib"
     if otool -l "$OUT/libairspy.dylib" | grep -A2 LC_RPATH | grep -q "$WORK"; then
         echo "libairspy.dylib contains a build tree rpath" >&2
@@ -131,7 +129,6 @@ if ! "$ROOT/native/check-bindings.sh" airspy/libairspy/src/airspy.h "$BUILT"; th
 fi
 
 cp airspy/libairspy/LICENSE.md "$ROOT/dist/native/licenses/libairspy-LICENSE.md"
-cp "libusb-$LIBUSB_VERSION/COPYING" "$ROOT/dist/native/licenses/libusb-COPYING"
 cat > "$OUT/build-info.properties" <<INFO
 airspy.ref=$REF
 airspy.commit=$UPSTREAM_COMMIT
