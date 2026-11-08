@@ -108,12 +108,20 @@ jobs:
       - name: Assemble
         env:
           VERSION: ${{ inputs.version }}
-        run: ./gradlew assemble --console=plain -PrequireAllPlatforms=true -Pversion="$VERSION"
+        run: ./gradlew assemble runtimeDependencies --console=plain -PrequireAllPlatforms=true -Pversion="$VERSION"
 
       - uses: actions/upload-artifact@v7
         with:
           name: jars
           path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+      # jlibusb, which the jar checks need next to the jar. Not published.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: runtime-dependencies
+          path: build/runtime-dependencies/*.jar
           if-no-files-found: error
           retention-days: 7
 
@@ -136,11 +144,16 @@ jobs:
         with:
           name: jars
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: runtime-dependencies
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
+      # The manifest Class-Path finds jlibusb beside the jar.
       - name: Load native libraries from the jar
         shell: bash
         run: |

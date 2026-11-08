@@ -13,7 +13,21 @@ version = providers.gradleProperty("version").getOrElse(pinnedVersion)
 
 repositories {
     mavenCentral()
+    // jlibusb is published as a GitHub release. Tagged releases live under
+    // v<version>; the rolling nightly pre-release under "nightly".
+    ivy {
+        url = uri("https://github.com/DSheirer/jlibusb/releases/download")
+        patternLayout {
+            artifact("v[revision]/[artifact]-[revision].[ext]")
+            artifact("nightly/[artifact]-[revision].[ext]")
+        }
+        metadataSources { artifact() }
+        content { includeModule("io.github.dsheirer", "jlibusb") }
+    }
 }
+
+// jlibusb supplies libusb and loads libairspy next to it.
+val jlibusbVersion = providers.gradleProperty("jlibusbVersion").get()
 
 // Directory holding <platform>/ subdirectories created by native/build-*.
 val nativeDir = layout.projectDirectory.dir(
@@ -30,6 +44,7 @@ java {
 }
 
 dependencies {
+    implementation("io.github.dsheirer:jlibusb:$jlibusbVersion")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -83,8 +98,16 @@ tasks.jar {
             "Implementation-Version" to project.version,
             "Automatic-Module-Name" to "io.github.dsheirer.airspy",
             "Main-Class" to "io.github.dsheirer.airspy.AirspyInfo",
+            // Lets java -jar find jlibusb when its jar sits alongside.
+            "Class-Path" to "jlibusb-$jlibusbVersion.jar",
             "Enable-Native-Access" to "ALL-UNNAMED")
     }
+}
+
+// Copies the jlibusb jar for the workflows' jar checks, which run without Gradle.
+tasks.register<Sync>("runtimeDependencies") {
+    from(configurations.runtimeClasspath)
+    into(layout.buildDirectory.dir("runtime-dependencies"))
 }
 
 // Tests see the native libraries the same way a consumer of the jar does.

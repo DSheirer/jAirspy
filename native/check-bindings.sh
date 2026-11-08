@@ -9,6 +9,8 @@
 # declares airspy_config_read and airspy_config_write without implementing
 # them) need no binding either.
 set -euo pipefail
+# sort and comm must agree on collation order whatever the caller's locale.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HEADER="$1"
